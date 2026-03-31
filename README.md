@@ -71,6 +71,7 @@ Main playable city scene:
 This project is intended to build for:
 
 - Windows 64-bit
+- macOS
 
 ## Git LFS
 
