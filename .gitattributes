@@ -1,0 +1,5 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+Assets/CartoonTracksPack1/Track1/Textures/road_normal.png filter=lfs diff=lfs merge=lfs -text
+Assets/CartoonTracksPack1/Track1/Textures/road.psd filter=lfs diff=lfs merge=lfs -text
+Assets/Versatile[[:space:]]Studio[[:space:]]Assets/Demo[[:space:]]City[[:space:]]By[[:space:]]Versatile[[:space:]]Studio/Scenes/demo_city_night/LightingData.asset filter=lfs diff=lfs merge=lfs -text

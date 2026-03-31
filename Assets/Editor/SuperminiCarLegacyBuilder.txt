@@ -1,0 +1,122 @@
+#if UNITY_EDITOR
+using UnityEditor;
+using UnityEngine;
+
+public static class MuscleCarBuilder
+{
+    [MenuItem("Tools/FatalChase/Create Muscle Car (RWD)")]
+    public static void CreateMuscleCar()
+    {
+        var car = new GameObject("MuscleCar_RWD");
+        Undo.RegisterCreatedObjectUndo(car, "Create MuscleCar");
+        car.transform.position = Vector3.up * 1.1f;
+
+        var rb = car.AddComponent<Rigidbody>();
+        rb.mass = 1750f;
+        rb.linearDamping = 0.05f;
+        rb.angularDamping = 1.5f;
+
+        var bodyCol = car.AddComponent<BoxCollider>();
+        bodyCol.size = new Vector3(2.0f, 0.65f, 4.6f);
+        bodyCol.center = new Vector3(0f, 0.75f, 0f);
+
+        var body = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        Object.DestroyImmediate(body.GetComponent<Collider>());
+        body.name = "BodyMesh";
+        body.transform.SetParent(car.transform, false);
+        body.transform.localPosition = bodyCol.center;
+        body.transform.localScale = bodyCol.size;
+
+        var com = new GameObject("CenterOfMass");
+        com.transform.SetParent(car.transform, false);
+        com.transform.localPosition = new Vector3(0f, 0.25f, 0.1f);
+
+        float hw = 1.0f, fZ = 1.65f, rZ = -1.55f, wY = 0.45f;
+
+        var fl = CreateWheel(car.transform, "WC_FL", new Vector3(-hw, wY,  fZ));
+        var fr = CreateWheel(car.transform, "WC_FR", new Vector3( hw, wY,  fZ));
+        var rl = CreateWheel(car.transform, "WC_RL", new Vector3(-hw, wY,  rZ));
+        var rr = CreateWheel(car.transform, "WC_RR", new Vector3( hw, wY,  rZ));
+
+        SetupWheel(fl); SetupWheel(fr);
+        SetupWheel(rl); SetupWheel(rr);
+
+        var flM = CreateWheelMesh(car.transform, "Wheel_FL", fl.transform.localPosition);
+        var frM = CreateWheelMesh(car.transform, "Wheel_FR", fr.transform.localPosition);
+        var rlM = CreateWheelMesh(car.transform, "Wheel_RL", rl.transform.localPosition);
+        var rrM = CreateWheelMesh(car.transform, "Wheel_RR", rr.transform.localPosition);
+
+        // Must match the class name of the runtime script exactly
+var ctrl = car.AddComponent<SuperminiCarController>();
+        ctrl.FL = fl;   ctrl.FR = fr;   ctrl.RL = rl;   ctrl.RR = rr;
+        ctrl.FLMesh = flM; ctrl.FRMesh = frM; ctrl.RLMesh = rlM; ctrl.RRMesh = rrM;
+        ctrl.centerOfMass = com.transform;
+
+        // Create a ground plane if none exists
+        if (Object.FindFirstObjectByType<Terrain>() == null &&
+            GameObject.Find("Ground") == null &&
+            GameObject.Find("Plane") == null)
+        {
+            var ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
+            ground.name = "Ground";
+            ground.transform.position = Vector3.zero;
+            ground.transform.localScale = new Vector3(50f, 1f, 50f);
+            Undo.RegisterCreatedObjectUndo(ground, "Create Ground");
+        }
+
+        Selection.activeGameObject = car;
+        EditorGUIUtility.PingObject(car);
+    }
+
+    static WheelCollider CreateWheel(Transform parent, string name, Vector3 pos)
+    {
+        var go = new GameObject(name);
+        Undo.RegisterCreatedObjectUndo(go, "Wheel");
+        go.transform.SetParent(parent, false);
+        go.transform.localPosition = pos;
+        return go.AddComponent<WheelCollider>();
+    }
+
+    static Transform CreateWheelMesh(Transform parent, string name, Vector3 pos)
+    {
+        // Target for the wheel collider to spin
+        var proxy = new GameObject(name);
+        Undo.RegisterCreatedObjectUndo(proxy, "WheelProxy");
+        proxy.transform.SetParent(parent, false);
+        proxy.transform.localPosition = pos;
+
+        // Visual cylinder
+        var cyl = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        Undo.RegisterCreatedObjectUndo(cyl, "WheelCylinder");
+        Object.DestroyImmediate(cyl.GetComponent<Collider>());
+        cyl.transform.SetParent(proxy.transform, false);
+        
+        // 90-degree rotation so the flat sides face out
+        cyl.transform.localRotation = Quaternion.Euler(0f, 0f, 90f);
+        cyl.transform.localScale = new Vector3(0.75f, 0.25f, 0.75f);
+        
+        return proxy.transform;
+    }
+
+    static void SetupWheel(WheelCollider wc)
+    {
+        wc.radius = 0.37f;
+        wc.suspensionDistance = 0.20f;
+        wc.mass = 25f;
+
+        var sp = wc.suspensionSpring;
+        sp.spring = 42000f; sp.damper = 5200f; sp.targetPosition = 0.5f;
+        wc.suspensionSpring = sp;
+
+        var fwd = wc.forwardFriction;
+        fwd.extremumSlip  = 0.35f; fwd.extremumValue  = 1.10f;
+        fwd.asymptoteSlip = 0.90f; fwd.asymptoteValue = 0.75f;
+        wc.forwardFriction = fwd;
+
+        var side = wc.sidewaysFriction;
+        side.extremumSlip  = 0.25f; side.extremumValue  = 1.15f;
+        side.asymptoteSlip = 0.75f; side.asymptoteValue = 0.85f;
+        wc.sidewaysFriction = side;
+    }
+}
+#endif
